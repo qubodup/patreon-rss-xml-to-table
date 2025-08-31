@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RSS → Wikitext Converter</title>
+  <style>
+    body { font-family: sans-serif; padding: 1rem; max-width: 800px; margin: auto; }
+    textarea { width: 100%; height: 200px; margin-bottom: 1rem; font-family: monospace; }
+    button { padding: 0.5rem 1rem; font-size: 1rem; }
+    pre { background: #f7f7f7; padding: 1rem; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h2>RSS → Wikitext Table Converter</h2>
+  <p>Paste one or more &lt;item&gt; blocks below:</p>
+  <textarea id="rssInput" placeholder="Paste RSS <item>...</item> blocks here"></textarea>
+  <br>
+  <button onclick="convert()">Convert</button>
+  <h3>Output:</h3>
+  <pre id="output"></pre>
+
+  <script>
+    // helper: decode HTML entities
+    function decodeHTML(html) {
+      const txt = document.createElement("textarea");
+      txt.innerHTML = html;
+      return txt.value;
+    }
+
+    function convert() {
+      const input = document.getElementById('rssInput').value;
+      let output = "";
+
+      const items = input.match(/<item[\s\S]*?<\/item>/g) || [];
+
+      items.forEach(item => {
+        const title = (item.match(/<title>([\s\S]*?)<\/title>/) || [,""])[1].trim();
+        const link = (item.match(/<link>([\s\S]*?)<\/link>/) || [,""])[1].trim();
+        let desc = (item.match(/<description>([\s\S]*?)<\/description>/) || [,""])[1];
+
+        // decode HTML entities, strip tags, collapse whitespace
+        desc = decodeHTML(desc)
+                 .replace(/<\/?[^>]+(>|$)/g, "")
+                 .replace(/\s+/g, " ")
+                 .trim();
+
+        const pubDateRaw = (item.match(/<pubDate>([\s\S]*?)<\/pubDate>/) || [,""])[1].trim();
+        let pubDate = "";
+        if (pubDateRaw) {
+          try {
+            const date = new Date(pubDateRaw);
+            pubDate = date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+          } catch(e) {
+            pubDate = pubDateRaw;
+          }
+        }
+
+        output += `| ${pubDate}\n`;
+        output += `| [${link} ${title}]\n`;
+        output += `| \n`;
+        output += `| ${desc}\n`;
+        output += `|-\n`;
+      });
+
+      document.getElementById('output').textContent = output || "No <item> blocks found.";
+    }
+  </script>
+  <p><a href="https://github.com/qubodup/patreon-rss-xml-to-table">GitHub project</a></p>
+</body>
+</html>
